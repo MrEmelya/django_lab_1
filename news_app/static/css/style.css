@@ -1,0 +1,22 @@
+/* Собственные стили для портала */
+body {
+    background-color: #f8f9fa;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.news-card {
+    transition: transform 0.2s;
+}
+
+.news-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.badge-date {
+    font-size: 0.85em;
+    background-color: #6c757d;
+}

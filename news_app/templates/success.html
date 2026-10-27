@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Успех!{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6 mx-auto text-center mt-5">
+            <div class="card shadow-sm border-success">
+                <div class="card-body p-5">
+                    <h1 class="display-4 text-success mb-3">✅</h1>
+                    <h2 class="mb-3">Новость успешно добавлена!</h2>
+                    <p class="text-muted">Ваша новость была сохранена и уже появилась на главной странице.</p>
+                    <div class="mt-4">
+                        <a href="{% url 'home' %}" class="btn btn-primary">На главную</a>
+                        <a href="{% url 'add_news' %}" class="btn btn-outline-success ms-2">Добавить еще</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
