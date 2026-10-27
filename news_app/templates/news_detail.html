@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ news.title }} - Новостной портал{% endblock %}
+{% block title %}{{ news.title }}{% endblock %}
 
 {% block content %}
     <div class="row">
@@ -15,7 +15,13 @@
             <div class="card shadow-sm">
                 <div class="card-body p-4">
                     <h1 class="mb-3">{{ news.title }}</h1>
-                    <p class="text-muted border-bottom pb-2">Опубликовано: {{ news.date }}</p>
+                    <p class="text-muted border-bottom pb-2">
+                        Автор: <strong>{{ news.author.username }}</strong> | 
+                        Опубликовано: {{ news.date_created|date:"d.m.Y H:i" }}
+                        {% if news.date_updated != news.date_created %}
+                            <br><small>Обновлено: {{ news.date_updated|date:"d.m.Y H:i" }}</small>
+                        {% endif %}
+                    </p>
                     
                     <div class="mb-4 fs-5 text-secondary">
                         <strong>{{ news.summary }}</strong>
@@ -25,8 +31,16 @@
                         {{ news.content }}
                     </div>
                 </div>
-                <div class="card-footer bg-white py-3">
-                    <a href="{% url 'home' %}" class="btn btn-secondary">← Назад к списку</a>
+                
+                <div class="card-footer bg-white py-3 d-flex justify-content-between">
+                    <a href="{% url 'home' %}" class="btn btn-secondary">← Назад</a>
+                    
+                    {% if news.author == user %}
+                        <div>
+                            <a href="{% url 'news_edit' news.id %}" class="btn btn-warning">Редактировать</a>
+                            <a href="{% url 'news_delete' news.id %}" class="btn btn-danger">Удалить</a>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

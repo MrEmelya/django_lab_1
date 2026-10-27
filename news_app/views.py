@@ -1,90 +1,113 @@
-import os
-import json
-import datetime
-from django.shortcuts import render, redirect
-from django.http import Http404
-from .forms import NewsForm
-
-# Путь к файлу с данными
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-DATA_FILE = os.path.join(DATA_DIR, 'news.json')
-
-def ensure_data_file():
-    """Проверяет, существует ли папка и файл данных. Если нет - создает."""
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
-    if not os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump([], f, ensure_ascii=False, indent=2)
-
-def load_news():
-    """Читает JSON и возвращает список словарей."""
-    ensure_data_file()
-    with open(DATA_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-def save_news(news_list):
-    """Перезаписывает JSON."""
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(news_list, f, ensure_ascii=False, indent=2)
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponseForbidden
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login, logout
+from django.contrib import messages
+from django.core.paginator import Paginator
+from .models import News
+from .forms import NewsForm, UserRegisterForm, UserUpdateForm
 
 def home_view(request):
-    """Главная страница со списком новостей."""
-    news_list = load_news()
+    """Главная страница со списком новостей и пагинацией."""
+    news_list = News.objects.all()
     
-    # Сортируем в обратном хронологическом порядке (от новых к старым)
-    # Используем ключ 'date', а если даты совпадают - по 'id'
-    news_list.sort(key=lambda x: (x['date'], x['id']), reverse=True)
+    # Настраиваем пагинацию: по 3 новости на страницу
+    paginator = Paginator(news_list, 3) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
-    # Получаем сегодняшнюю дату в формате YYYY-MM-DD
-    today = datetime.date.today().isoformat()
-    
-    context = {
-        'news_list': news_list,
-        'today': today
-    }
-    return render(request, 'home.html', context)
+    return render(request, 'home.html', {'page_obj': page_obj})
 
 def news_detail_view(request, news_id):
-    """Страница отдельной новости."""
-    news_list = load_news()
-    
-    # Ищем новость по id
-    news_item = next((n for n in news_list if n['id'] == news_id), None)
-    
-    if news_item is None:
-        raise Http404("Новость не найдена")
-        
-    return render(request, 'news_detail.html', {'news': news_item})
+    """Детальная страница новости."""
+    news = get_object_or_404(News, id=news_id)
+    return render(request, 'news_detail.html', {'news': news})
 
-def add_news_view(request):
-    """Добавление новости."""
+@login_required
+def news_create_view(request):
+    """Добавление новости (только для авторизованных)."""
     if request.method == 'POST':
         form = NewsForm(request.POST)
         if form.is_valid():
-            news_list = load_news()
-            
-            # Генерируем новый ID
-            max_id = max((n['id'] for n in news_list), default=0) + 1
-            
-            # Создаем словарь с новостью
-            new_news = {
-                'id': max_id,
-                'title': form.cleaned_data['title'],
-                'summary': form.cleaned_data['summary'],
-                'content': form.cleaned_data['content'],
-                'date': datetime.date.today().isoformat() # Автогенерация даты
-            }
-            
-            news_list.append(new_news)
-            save_news(news_list)
-            
-            return redirect('success')
+            news = form.save(commit=False)
+            news.author = request.user # Привязываем автора
+            news.save()
+            messages.success(request, 'Новость успешно добавлена!')
+            return redirect('home')
     else:
         form = NewsForm()
-        
-    return render(request, 'add_news.html', {'form': form})
+    return render(request, 'news_form.html', {'form': form, 'title': 'Добавить новость'})
 
-def success_view(request):
-    """Страница успешного добавления."""
-    return render(request, 'success.html')
+@login_required
+def news_edit_view(request, news_id):
+    """Редактирование новости (только для автора)."""
+    news = get_object_or_404(News, id=news_id)
+    
+    # Проверка прав
+    if news.author != request.user:
+        return HttpResponseForbidden("Вы не можете редактировать эту новость")
+        
+    if request.method == 'POST':
+        form = NewsForm(request.POST, instance=news)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Новость успешно обновлена!')
+            return redirect('news_detail', news_id=news.id)
+    else:
+        form = NewsForm(instance=news)
+    return render(request, 'news_form.html', {'form': form, 'title': 'Редактировать новость'})
+
+@login_required
+def news_delete_view(request, news_id):
+    """Удаление новости (только для автора)."""
+    news = get_object_or_404(News, id=news_id)
+    
+    if news.author != request.user:
+        return HttpResponseForbidden("Вы не можете удалить эту новость")
+        
+    if request.method == 'POST':
+        news.delete()
+        messages.success(request, 'Новость удалена.')
+        return redirect('home')
+        
+    return render(request, 'news_confirm_delete.html', {'news': news})
+
+def register_view(request):
+    """Регистрация нового пользователя."""
+    if request.user.is_authenticated:
+        return redirect('home')
+        
+    if request.method == 'POST':
+        form = UserRegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user) # Автоматический вход после регистрации
+            messages.success(request, 'Регистрация прошла успешно!')
+            return redirect('home')
+    else:
+        form = UserRegisterForm()
+    return render(request, 'register.html', {'form': form})
+
+@login_required
+def profile_view(request):
+    """Страница профиля и его редактирование."""
+    if request.method == 'POST':
+        form = UserUpdateForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Профиль обновлен!')
+            return redirect('profile')
+    else:
+        form = UserUpdateForm(instance=request.user)
+    return render(request, 'profile.html', {'form': form})
+
+@login_required
+def delete_profile_view(request):
+    """Удаление аккаунта."""
+    if request.method == 'POST':
+        user = request.user
+        logout(request)
+        user.delete()
+        messages.success(request, 'Аккаунт удален.')
+        return redirect('home')
+    return render(request, 'profile_confirm_delete.html')

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Удаление аккаунта{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6 mx-auto text-center mt-5">
+            <div class="card shadow-sm border-danger">
+                <div class="card-body p-5">
+                    <h2 class="text-danger mb-4">Удаление аккаунта</h2>
+                    <p class="fs-5">Вы уверены, что хотите удалить свой аккаунт?</p>
+                    <p class="text-muted">Все ваши новости также будут удалены. Это действие нельзя отменить.</p>
+                    
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger px-4">Да, удалить навсегда</button>
+                        <a href="{% url 'profile' %}" class="btn btn-secondary">Отмена</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

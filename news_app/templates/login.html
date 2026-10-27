@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Вход в систему{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-5 mx-auto">
+            <div class="card shadow-sm mt-5">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4">Вход</h2>
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit" class="btn btn-primary w-100 mt-3">Войти</button>
+                    </form>
+                    <div class="text-center mt-3">
+                        <small>Нет аккаунта? <a href="{% url 'register' %}">Зарегистрироваться</a></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

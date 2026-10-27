@@ -3,29 +3,28 @@
 {% block title %}Главная - Новостной портал{% endblock %}
 
 {% block content %}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Последние новости</h1>
-    </div>
+    <h1 class="mb-4">Все новости</h1>
 
-    {% if news_list %}
+    {% if page_obj %}
         <div class="row">
-            {% for news in news_list %}
-                <!-- Если дата новости совпадает с сегодняшней, делаем фон желтоватым -->
+            {% for news in page_obj %}
                 <div class="col-md-8 mx-auto mb-3">
-                    <div class="card news-card {% if news.date == today %}bg-warning bg-opacity-10 border-warning{% endif %}">
+                    <div class="card news-card shadow-sm">
                         <div class="card-body">
-                            <h4 class="card-title">
-                                <a href="{% url 'news_detail' news.id %}" class="text-decoration-none text-dark">
-                                    {{ news.title }}
-                                </a>
-                            </h4>
-                            <p class="card-text text-muted">{{ news.summary }}</p>
-                            
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <span class="badge badge-date">{{ news.date }}</span>
-                                {% if news.date == today %}
-                                    <span class="badge bg-warning text-dark">Новое сегодня!</span>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h4 class="card-title mb-0">
+                                    <a href="{% url 'news_detail' news.id %}" class="text-decoration-none text-dark">
+                                        {{ news.title }}
+                                    </a>
+                                </h4>
+                                {% if news.author == user %}
+                                    <span class="badge bg-primary">Ваша новость</span>
                                 {% endif %}
+                            </div>
+                            <p class="card-text text-muted mt-2">{{ news.summary }}</p>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-3 text-muted small">
+                                <span>Автор: <strong>{{ news.author.username }}</strong> | {{ news.date_created|date:"d.m.Y H:i" }}</span>
                                 <a href="{% url 'news_detail' news.id %}" class="btn btn-sm btn-outline-primary">Читать далее</a>
                             </div>
                         </div>
@@ -33,9 +32,42 @@
                 </div>
             {% endfor %}
         </div>
+
+        <!-- Пагинация -->
+        {% if page_obj.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Назад</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">Назад</span></li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Вперед</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">Вперед</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+
     {% else %}
         <div class="alert alert-info text-center">
-            Пока нет ни одной новости. <a href="{% url 'add_news' %}" class="alert-link">Добавьте первую!</a>
+            Пока нет ни одной новости. 
+            {% if user.is_authenticated %}
+                <a href="{% url 'news_create' %}" class="alert-link">Добавьте первую!</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="alert-link">Войдите</a>, чтобы добавить новость.
+            {% endif %}
         </div>
     {% endif %}
 {% endblock %}
